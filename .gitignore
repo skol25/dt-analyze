@@ -1,0 +1,50 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+.nyc_output
+
+# Production
+build/
+dist/
+
+# Logs
+logs/
+*.log
+logs/*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Ignore package-lock.json or yarn.lock in case of using one lock file strategy
+package-lock.json
+yarn.lock
+
+# Ignore compiled JavaScript files from TypeScript
+*.tsbuildinfo
+
+# Ignore webpack and parcel cache
+.cache/
+.parcel-cache/
