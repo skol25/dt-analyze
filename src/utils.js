@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-
-// Función para obtener archivos JS recursivamente
+import * as acorn from 'acorn';
+import * as walk from 'acorn-walk'; 
+// Función para obtener todos los archivos JavaScript del directorio
 async function getJavaScriptFiles(dir, files = []) {
   const dirents = await fs.promises.readdir(dir, { withFileTypes: true });
 
@@ -17,88 +18,99 @@ async function getJavaScriptFiles(dir, files = []) {
   return files;
 }
 
+// Función para analizar el AST y detectar dependencias usadas
+function analyzeASTForDependencyUse(ast, importedSymbols) {
+  const usedSymbols = new Set();
+
+  // Recorremos el AST para identificar las dependencias usadas
+  walk.simple(ast, {
+    Identifier(node) {
+      if (importedSymbols.has(node.name)) {
+        usedSymbols.add(node.name);
+      }
+    },
+  });
+
+  return usedSymbols;
+}
+
+
 async function getUsedDependencies(spinner) {
-  const usedDeps = new Set(); // Dependencias realmente usadas
-  const importedButUnused = new Map(); // Dependencias importadas pero no usadas con referencia a los archivos
+  const usedDepsGlobal = new Set(); 
+  const unusedDepsByFile = []; 
+  const importedButUnused = []; 
 
   try {
     spinner.text = "Finding JavaScript files...";
     const files = await getJavaScriptFiles(process.cwd());
+    console.log(files.length);
 
-    if (files.length === 0) {
+    if (files.length === 0) {  // Línea donde podría estar fallando
       console.log("No JavaScript files found. Is the search path correct?");
-      return { usedDependencies: [], importedButUnused: [] };
+      return { usedDependencies: [], unusedDependencies: [], importedButUnused: [] };
     }
 
     spinner.text = `Found ${files.length} JavaScript files. Starting analysis...`;
 
+    // Recorremos cada archivo JS encontrado
     for (const file of files) {
       const content = await fs.promises.readFile(file, 'utf-8');
+      const ast = acorn.parse(content, { sourceType: 'module', ecmaVersion: 2020 });
 
-      // Expresión regular para detectar imports y requires
       const importRegex = /import\s+(.*)\s+from\s+['"`]([^'"]+)['"`]/g;
       const requireRegex = /require\s*\(\s*['"`]([^'"]+)['"`]\s*\)/g;
 
       let match;
-      const importedDeps = new Set(); // Para las dependencias importadas en este archivo
+      const importedDeps = new Set();
+      const importedSymbols = new Set(); 
 
-      // Procesar las importaciones 'import ... from ...'
+      // Procesamos importaciones con 'import ... from ...'
       while ((match = importRegex.exec(content)) !== null) {
-        const dep = match[2]; // Nombre de la dependencia importada
-        const importedSymbols = match[1]; // Lo que fue importado (ej. '_', { ora })
+        const dep = match[2];
+        const symbols = match[1].replace(/[{}]/g, '').split(/\s*,\s*/).map(s => s.trim());
 
         if (dep && !dep.startsWith('.') && dep !== '') {
           const depName = dep.split('/')[0];
-          importedDeps.add(depName); // Registrar la dependencia como importada
-
-          if (!importedButUnused.has(depName)) {
-            importedButUnused.set(depName, new Set());
-          }
-          importedButUnused.get(depName).add(file); // Registrar el archivo donde fue importada
-
-          // Verificar si alguna de las entidades importadas realmente se usa
-          const symbols = importedSymbols.split(/\s*,\s*/).map(symbol => symbol.replace(/[\{\}\s]/g, ''));
-          let isUsedInFile = symbols.some(symbol => new RegExp(`\\b${symbol}\\b`).test(content));
-
-          if (isUsedInFile) {
-            usedDeps.add(depName); // La dependencia fue utilizada
-          }
+          importedDeps.add(depName);
+          symbols.forEach(symbol => importedSymbols.add(symbol));
         }
       }
 
-      // Procesar 'require(...)'
+      // Procesamos las importaciones con require(...)
       while ((match = requireRegex.exec(content)) !== null) {
         const dep = match[1];
-
         if (dep && !dep.startsWith('.') && dep !== '') {
           const depName = dep.split('/')[0];
-          importedDeps.add(depName); // Registrar la dependencia como importada
-
-          if (!importedButUnused.has(depName)) {
-            importedButUnused.set(depName, new Set());
-          }
-          importedButUnused.get(depName).add(file);
-
-          const isUsedInFile = new RegExp(`\\b${depName}\\b`).test(content);
-
-          if (isUsedInFile) {
-            usedDeps.add(depName); // La dependencia fue utilizada
-          }
+          importedDeps.add(depName);
+          importedSymbols.add(depName);
         }
+      }
+
+      // Analizamos el AST para encontrar dependencias usadas en este archivo
+      const usedSymbols = analyzeASTForDependencyUse(ast, importedSymbols);
+
+      // Si una dependencia se usa, la marcamos como utilizada a nivel global
+      const unusedDepsInFile = [];
+      for (const dep of importedDeps) {
+        const symbolsForDep = Array.from(importedSymbols).filter(symbol => symbol.startsWith(dep));
+        if (symbolsForDep.some(symbol => usedSymbols.has(symbol))) {
+          usedDepsGlobal.add(dep); // Marcar la dependencia como usada
+        } else {
+          unusedDepsInFile.push(dep); // Agregar a las no usadas en este archivo
+          importedButUnused.push({ dep, file }); // Dependencia importada pero no usada
+        }
+      }
+
+      // Si hay dependencias no usadas, las agregamos al reporte por archivo
+      if (unusedDepsInFile.length > 0) {
+        unusedDepsByFile.push({ file, unusedDeps: unusedDepsInFile });
       }
     }
 
-    // Filtrar dependencias que fueron importadas pero no usadas
-    const result = [];
-    importedButUnused.forEach((files, dep) => {
-      if (!usedDeps.has(dep)) {
-        result.push({ dep, files: Array.from(files) });
-      }
-    });
-
     return {
-      usedDependencies: Array.from(usedDeps),
-      importedButUnused: result,
+      usedDependencies: Array.from(usedDepsGlobal),
+      unusedDependenciesByFile: unusedDepsByFile,
+      importedButUnused: importedButUnused,  
     };
   } catch (err) {
     spinner.fail('Error during file search');
@@ -108,9 +120,8 @@ async function getUsedDependencies(spinner) {
 }
 
 
-
 function findUnusedDependencies(allDeps, usedDeps) {
-  return allDeps.filter(dep => !usedDeps.includes(dep)); // Encontrar dependencias no usadas globalmente
+  return allDeps.filter(dep => !usedDeps.includes(dep)); 
 }
 
 export { findUnusedDependencies, getUsedDependencies };

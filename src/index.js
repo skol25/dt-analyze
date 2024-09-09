@@ -8,7 +8,7 @@ import figlet from 'figlet';
 
 async function analyze() {
   const spinner = ora('Analyzing your project...').start();
-  console.log('\n')
+  console.log('\n');
   try {
     console.log(chalk.cyan(figlet.textSync('DT analyze', {
       font: 'Slant',
@@ -19,7 +19,7 @@ async function analyze() {
     const pkg = await readPkg();
     const allDeps = [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.devDependencies || {})];
 
-    const { usedDependencies, importedButUnused } = await getUsedDependencies(spinner);
+    const { usedDependencies, importedButUnused, unusedDependenciesByFile } = await getUsedDependencies(spinner);
 
     const unusedDependencies = findUnusedDependencies(allDeps, usedDependencies);
 
@@ -35,22 +35,22 @@ async function analyze() {
     // Dependencias importadas pero no usadas
     if (importedButUnused.length > 0) {
       console.log(chalk.yellow('\n⚠️ Imported but unused dependencies:'));
-      importedButUnused.forEach(({ dep, files }) => {
-        console.log(chalk.yellow(`- ${dep}: Imported in files [${files.join(', ')}] but not used.`));
+      importedButUnused.forEach(({ dep, file }) => {
+        console.log(chalk.yellow(`- ${dep}: Imported in file ${file} but not used.`));
       });
     } else {
       console.log(chalk.green('\n✅ No dependencies are imported but unused!'));
     }
-    
+
     // Dependencias no importadas
     if (unusedDependencies.length > 0) {
       console.log(chalk.yellow('\n⚠️ Unused dependencies (installed but not imported):'), unusedDependencies);
     } else {
       console.log(chalk.green('\n✅ All installed dependencies are imported!'));
     }
-    
+
     spinner.succeed('✔ Dependency analysis complete.');
-    
+
   } catch (error) {
     spinner.fail('An error occurred during analysis.');
     console.error(error);
