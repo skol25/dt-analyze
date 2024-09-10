@@ -25,7 +25,12 @@ Install dep-trimmer with npm
     "analyze": "dep-trimmer --analyze"
   }
  ```
-or you just global install but this second choice is not recommended 
+
+and after add this line on your scripts you just run like any other scripts 
+```bash
+npm run analyze
+ ```
+or you just global install but this second choice is not recommended but if u global install u just run it like cli command without npm run 
 
 
 To run this tool, use the following commands:
