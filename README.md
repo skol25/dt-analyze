@@ -17,6 +17,17 @@ Install dep-trimmer with npm
     
 ## How to use
 
+**IMPORTANT* by the momnent you have 2 ways to implement this to your projects:
+
+**Modify your package.json adding this line per command **
+```bash
+"scripts": {
+    "analyze": "dep-trimmer --analyze"
+  }
+ ```
+or you just global install but this second choice is not recommended 
+
+
 To run this tool, use the following commands:
 
 1. **Analyze your project's dependencies** to find unused ones:
