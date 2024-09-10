@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+
 
 import { Command } from 'commander';
 import ora from 'ora';
@@ -13,7 +13,7 @@ program
   .option('-r, --remove', 'Remove unused dependencies')
   .parse(process.argv);
 
-const options = program.opts();  // Obtener las opciones
+const options = program.opts();  
 
 const spinner = ora('Processing...').start();
 
