@@ -58,7 +58,6 @@ function analyzeASTForDependencyUse(ast, importedSymbols, file) {
     if (node.type === 'MemberExpression' && node.object.type === 'Identifier') {
       const objectName = node.object.name;
       if (importedSymbols.has(objectName)) {
-        console.log(`Detected member expression usage: ${objectName}`);
         usedSymbols.add(objectName);
       }
     }
@@ -67,7 +66,6 @@ function analyzeASTForDependencyUse(ast, importedSymbols, file) {
     if (node.type === 'NewExpression' && node.callee.type === 'Identifier') {
       const className = node.callee.name;
       if (importedSymbols.has(className)) {
-        console.log(`Detected instantiation of class: ${className}`);
         usedSymbols.add(className);
       }
     }
@@ -76,7 +74,6 @@ function analyzeASTForDependencyUse(ast, importedSymbols, file) {
     if (node.type === 'CallExpression' && node.callee.type === 'Identifier') {
       const functionName = node.callee.name;
       if (importedSymbols.has(functionName)) {
-        console.log(`Detected direct function call: ${functionName}`);
         usedSymbols.add(functionName);
       }
     }
@@ -85,7 +82,6 @@ function analyzeASTForDependencyUse(ast, importedSymbols, file) {
     if (node.type === 'AwaitExpression' && node.argument.type === 'CallExpression') {
       const functionCall = node.argument.callee;
       if (functionCall.type === 'Identifier' && importedSymbols.has(functionCall.name)) {
-        console.log(`Detected async function call: ${functionCall.name}`);
         usedSymbols.add(functionCall.name);
       }
     }
@@ -94,7 +90,6 @@ function analyzeASTForDependencyUse(ast, importedSymbols, file) {
     if (node.type === 'CallExpression' && node.callee.type === 'MemberExpression' && node.callee.object.type === 'Identifier') {
       const objectName = node.callee.object.name;
       if (importedSymbols.has(objectName)) {
-        console.log(`Detected method call on imported object: ${objectName}`);
         usedSymbols.add(objectName);
       }
     }
