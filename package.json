@@ -1,6 +1,6 @@
 {
   "name": "dep-trimmer",
-  "version": "1.0.0",
+  "version": "2.0.2",
   "description": "A tool to trim unused npm dependencies",
   "bin": {
     "dep-trimmer": "./bin/dep-trimmer.js"

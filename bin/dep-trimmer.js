@@ -7,7 +7,7 @@ import { analyze, removeUnused } from '../src/index.js';
 const program = new Command();
 
 program
-  .version('1.0.0')
+  .version('2.0.2')
   .description('A CLI tool to trim unused npm dependencies')
   .option('-a, --analyze', 'Analyze dependencies and report unused ones')
   .option('-r, --remove', 'Remove unused dependencies')
